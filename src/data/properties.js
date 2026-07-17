@@ -1,0 +1,123 @@
+// Bundled property batch for the HOSTED app (Cloudflare Workers can't read the
+// filesystem at runtime). Mirrors demo/properties.json. Replace these with your
+// own verified listings, or — once deployed with a Gemini key — the daily scan
+// fills this role automatically. All addresses labeled DEMO are sample data.
+export const PROPERTIES = {
+  properties: [
+    {
+      listing: {
+        address: "123 Sample Street (DEMO), Bayview",
+        city: "San Francisco",
+        url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-A",
+        price: 800000,
+        propertyType: "Single Family",
+        bedrooms: 3,
+        bathrooms: 2,
+        squareFeet: 1400,
+        lotSize: 3000,
+        yearBuilt: 1948,
+        daysOnMarket: 62,
+        description:
+          "Estate sale, sold as-is. Original kitchen and bathrooms, dated interior, old flooring, worn carpet, deferred maintenance, cluttered rooms, poor curb appeal, overgrown landscaping. Functional but unattractive; needs cosmetic and moderate updates. Structurally sound per seller.",
+      },
+      classification: { aduPotential: "moderate", expansionPotential: true, confidence: "medium" },
+      riskNotes: "No red-tag stated. Verify permits, sewer lateral, foundation on inspection (unknown).",
+      comps: [
+        { address: "1450 Sample Ave (DEMO), Bayview", soldPrice: 1650000, soldDate: "2026-05", sqft: 1380, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-A-C1" },
+        { address: "88 Sample Court (DEMO), Bayview", soldPrice: 1700000, soldDate: "2026-04", sqft: 1450, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-A-C2" },
+        { address: "77 Sample Blvd (DEMO), Bayview", soldPrice: 1750000, soldDate: "2026-06", sqft: 1500, beds: 4, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-A-C3" }
+      ]
+    },
+    {
+      listing: {
+        address: "456 Example Way (DEMO), Excelsior",
+        city: "San Francisco",
+        url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-B",
+        price: 850000,
+        propertyType: "Single Family",
+        bedrooms: 3,
+        bathrooms: 2,
+        squareFeet: 1500,
+        lotSize: 2800,
+        yearBuilt: 1951,
+        daysOnMarket: 40,
+        description:
+          "Original condition throughout, dated finishes, old kitchen, worn flooring, deferred maintenance, poorly staged. Bring your contractor. Structurally usable.",
+      },
+      classification: { aduPotential: "moderate", expansionPotential: false, confidence: "medium" },
+      riskNotes: "Verify permits and roof age on inspection (unknown).",
+      comps: [
+        { address: "12 Example Ct (DEMO), Excelsior", soldPrice: 1700000, soldDate: "2026-05", sqft: 1480, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-B-C1" },
+        { address: "34 Example Ln (DEMO), Excelsior", soldPrice: 1750000, soldDate: "2026-03", sqft: 1520, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-B-C2" },
+        { address: "56 Example Dr (DEMO), Excelsior", soldPrice: 1800000, soldDate: "2026-06", sqft: 1560, beds: 4, baths: 3, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-B-C3" }
+      ]
+    },
+    {
+      listing: {
+        address: "789 Polished Place (DEMO), Sunset",
+        city: "San Francisco",
+        url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-C",
+        price: 1450000,
+        propertyType: "Single Family",
+        bedrooms: 3,
+        bathrooms: 2,
+        squareFeet: 1400,
+        lotSize: 2500,
+        yearBuilt: 1955,
+        daysOnMarket: 8,
+        description:
+          "Fully remodeled with designer finishes, new kitchen and bathrooms, move-in ready, professionally staged. New roof, electrical, and HVAC.",
+      },
+      classification: { aduPotential: "weak", expansionPotential: false, confidence: "medium" },
+      comps: [
+        { address: "10 Polished Ave (DEMO), Sunset", soldPrice: 1550000, soldDate: "2026-05", sqft: 1390, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-C-C1" },
+        { address: "20 Polished St (DEMO), Sunset", soldPrice: 1600000, soldDate: "2026-04", sqft: 1420, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-C-C2" },
+        { address: "30 Polished Way (DEMO), Sunset", soldPrice: 1650000, soldDate: "2026-06", sqft: 1450, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-C-C3" }
+      ]
+    },
+    {
+      listing: {
+        address: "321 Burned Lane (DEMO), Bayview",
+        city: "San Francisco",
+        url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-D",
+        price: 700000,
+        propertyType: "Single Family",
+        bedrooms: 3,
+        bathrooms: 2,
+        squareFeet: 1400,
+        lotSize: 3000,
+        yearBuilt: 1942,
+        daysOnMarket: 120,
+        description: "Significant fire damage; requires reconstruction. Sold strictly as-is.",
+      },
+      classification: { confidence: "low" },
+      comps: [
+        { address: "1450 Sample Ave (DEMO), Bayview", soldPrice: 1650000, soldDate: "2026-05", sqft: 1380, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-D-C1" },
+        { address: "88 Sample Court (DEMO), Bayview", soldPrice: 1700000, soldDate: "2026-04", sqft: 1450, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-D-C2" },
+        { address: "77 Sample Blvd (DEMO), Bayview", soldPrice: 1750000, soldDate: "2026-06", sqft: 1500, beds: 4, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-D-C3" }
+      ]
+    },
+    {
+      listing: {
+        address: "654 Overpriced Road (DEMO), Richmond",
+        city: "San Francisco",
+        url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-E",
+        price: 1400000,
+        propertyType: "Single Family",
+        bedrooms: 3,
+        bathrooms: 2,
+        squareFeet: 1400,
+        lotSize: 2600,
+        yearBuilt: 1949,
+        daysOnMarket: 15,
+        description: "Original kitchen, dated interior, worn, deferred maintenance. Priced high for the area.",
+      },
+      classification: { aduPotential: "weak", confidence: "medium" },
+      comps: [
+        { address: "5 Overpriced Ave (DEMO), Richmond", soldPrice: 1450000, soldDate: "2026-05", sqft: 1390, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-E-C1" },
+        { address: "15 Overpriced St (DEMO), Richmond", soldPrice: 1500000, soldDate: "2026-04", sqft: 1420, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-E-C2" },
+        { address: "25 Overpriced Way (DEMO), Richmond", soldPrice: 1550000, soldDate: "2026-06", sqft: 1450, beds: 3, baths: 2, url: "https://www.redfin.com/CA/San-Francisco/EXAMPLE-E-C3" }
+      ]
+    }
+  ]
+};

@@ -11,22 +11,30 @@ import { checkBuyBox, analyzeDeal } from "./agents/analyzer.js";
 import { Database } from "./tools/database.js";
 import { GeminiAI } from "./tools/gemini.js";
 import { deliverReport } from "./tools/email.js";
+import { analyzeManualRecord } from "./manual.js";
+import { appPage, leadsFromBatch } from "./ui.js";
+import { PROPERTIES } from "./data/properties.js";
 import { TARGET_AREAS, DATA_DISCLAIMER, MIN_SCORE_TO_PRESENT } from "./config.js";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/" ) {
-      return json({
-        agent: "Twin Home Buyer Flip Scout",
-        endpoints: {
-          "POST /run": "run daily scan (needs Authorization: Bearer AGENT_SECRET)",
-          "POST /analyze": "analyze one listing { url } (needs auth)",
-        },
-      });
+    // --- Public routes (no key) — this is Juan's easy-access app --------------
+    // The button UI. Open the Worker URL on any phone/laptop and tap RUN.
+    if (url.pathname === "/" || url.pathname === "/app") {
+      return htmlResponse(appPage("/leads"));
+    }
+    // Read-only leads: runs the deterministic engine over the bundled batch and
+    // returns qualified-only results. No secrets, no external calls, no key.
+    if (url.pathname === "/leads") {
+      return json(leadsFromBatch(PROPERTIES, analyzeManualRecord, DATA_DISCLAIMER));
+    }
+    if (url.pathname === "/health") {
+      return json({ ok: true, agent: "Twin Home Buyer Flip Scout" });
     }
 
+    // --- Protected routes (need Authorization: Bearer AGENT_SECRET) -----------
     if (!authorized(request, env)) {
       return json({ error: "unauthorized" }, 401);
     }
@@ -76,6 +84,13 @@ function json(obj, status = 200) {
   return new Response(JSON.stringify(obj, null, 2), {
     status,
     headers: { "Content-Type": "application/json" },
+  });
+}
+
+function htmlResponse(html, status = 200) {
+  return new Response(html, {
+    status,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }
 

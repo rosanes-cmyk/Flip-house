@@ -1,4 +1,27 @@
-# Deploy Flip Scout so it runs on its own (every morning)
+# Host the button app online for Juan (FREE, NO Gemini key)
+
+This puts the one-button app on a public URL Juan opens on his phone — tap **RUN**,
+see the qualified lead. It uses the deterministic engine only, so **no API key and
+no billing** are needed. (Auto-finding houses every morning still needs the Gemini
+key — that's the section below.)
+
+```bash
+npm install
+npx wrangler login          # opens browser, log into a free Cloudflare account
+npx wrangler deploy
+```
+You get a URL like `https://flip-scout-agent.<you>.workers.dev`. Send Juan that
+link. Opening it shows the app; tapping RUN calls `/leads` and shows qualified
+leads only. Edit `src/data/properties.js` to change the houses it evaluates (or
+wire the daily Gemini scan below to fill them in automatically).
+
+Public routes: `/` (app), `/leads` (qualified leads JSON), `/health`.
+Everything that spends money or touches secrets (`/run`, `/analyze`, `/selftest`)
+stays behind `AGENT_SECRET`.
+
+---
+
+# Make it fully autonomous (finds houses itself every morning)
 
 ~15 minutes, one time. Free. After this the agent searches your neighborhoods
 daily, finds real houses, ranks them, and can email you the lead — no pasting.
