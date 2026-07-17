@@ -52,6 +52,12 @@ export default {
       return json(analyzeManualRecord(record));
     }
 
+    // Self-test — run AFTER deploy to confirm the Gemini key works and that the
+    // agent can actually discover real listings. Does NOT run the full scan.
+    if (url.pathname === "/selftest") {
+      return json(await selfTest(env));
+    }
+
     return json({ error: "not found" }, 404);
   },
 
@@ -71,6 +77,39 @@ function json(obj, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+// Post-deploy health check: confirm the key works and discovery finds listings.
+async function selfTest(env) {
+  const out = { geminiKeyPresent: Boolean(env.GEMINI_API_KEY), geminiOk: false, sample: null, discovery: null, errors: [] };
+  if (!env.GEMINI_API_KEY) {
+    out.errors.push("GEMINI_API_KEY not set. Run: wrangler secret put GEMINI_API_KEY");
+    return out;
+  }
+  try {
+    const gemini = new GeminiAI(env.GEMINI_API_KEY);
+    out.sample = (await gemini.ask("Reply with the single word: OK")).trim().slice(0, 40);
+    out.geminiOk = /ok/i.test(out.sample);
+  } catch (e) {
+    out.errors.push("Gemini call failed: " + e.message);
+    return out;
+  }
+  try {
+    // One grounded search for Bayview — how many real listing URLs come back?
+    const g = new GeminiAI(env.GEMINI_API_KEY);
+    const { text } = await g.searchAndAsk(
+      "Find 3 fixer-upper / as-is single-family homes for sale in Bayview, San Francisco between $700,000 and $2,500,000. List each address, price, and the Redfin or Zillow listing URL."
+    );
+    const urls = extractListingUrls(text);
+    out.discovery = { listingUrlsFound: urls.length, sampleUrls: urls.slice(0, 3) };
+    if (urls.length === 0) {
+      out.errors.push("Search returned no listing URLs — discovery may need prompt tuning or listing sites may be limiting results.");
+    }
+  } catch (e) {
+    out.errors.push("Grounded search failed: " + e.message);
+  }
+  out.ready = out.geminiOk && (out.discovery?.listingUrlsFound || 0) > 0;
+  return out;
 }
 
 async function analyzeSingle(listingUrl, env) {
