@@ -43,6 +43,15 @@ export default {
       return json(deal);
     }
 
+    // Manual mode — no network/AI. Body is a full property record (see
+    // demo/property.json). Returns the same analysis the daily scan produces.
+    if (url.pathname === "/analyze-manual" && request.method === "POST") {
+      const record = await request.json().catch(() => null);
+      if (!record || !record.listing) return json({ error: "missing property record" }, 400);
+      const { analyzeManualRecord } = await import("./manual.js");
+      return json(analyzeManualRecord(record));
+    }
+
     return json({ error: "not found" }, 404);
   },
 

@@ -1,0 +1,63 @@
+{
+  "_dataLabels": {
+    "note": "LIVE SOURCES (Redfin/Zillow/Realtor/Gemini/Supabase) are NOT reachable from this environment, so this is a MANUALLY ENTERED demo record, clearly labeled. No property, comp, permit, zoning, or risk fact is invented and presented as verified/real.",
+    "listing_fields": "Manually entered (sample) — replace with a verified public listing before showing real deals",
+    "condition_signals": "Derived deterministically from the entered description text (not AI, not photos)",
+    "comps": "Manually entered (sample) — each needs a real sold-sale source URL to count",
+    "classification_value_add": "Manually entered hint (aduPotential / expansion)"
+  },
+  "listing": {
+    "address": "123 Sample Street (DEMO), Bayview",
+    "city": "San Francisco",
+    "url": "https://www.redfin.com/CA/San-Francisco/EXAMPLE-DEMO-LISTING",
+    "price": 800000,
+    "propertyType": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "squareFeet": 1400,
+    "lotSize": 3000,
+    "yearBuilt": 1948,
+    "daysOnMarket": 62,
+    "description": "Estate sale, sold as-is. Original kitchen and bathrooms, dated interior throughout, old flooring and worn carpet, deferred maintenance, cluttered rooms and poor curb appeal with overgrown landscaping. Functional but unattractive; needs cosmetic and moderate updates. Structurally sound per seller."
+  },
+  "classification": {
+    "aduPotential": "moderate",
+    "expansionPotential": true,
+    "extraBedBathPotential": false,
+    "confidence": "medium"
+  },
+  "riskNotes": "No red-tag or open-permit issues stated by seller. Verify permits, sewer lateral, and foundation on inspection (unknown - requires inspection).",
+  "holdingMonths": 6,
+  "comps": [
+    {
+      "address": "1450 Sample Ave (DEMO), Bayview, San Francisco, CA",
+      "soldPrice": 1650000,
+      "soldDate": "2026-05",
+      "sqft": 1380,
+      "beds": 3,
+      "baths": 2,
+      "url": "https://www.redfin.com/CA/San-Francisco/EXAMPLE-COMP-1",
+      "why": "Renovated, same neighborhood, similar size and bed/bath — represents ARV"
+    },
+    {
+      "address": "88 Sample Court (DEMO), Bayview, San Francisco, CA",
+      "soldPrice": 1700000,
+      "soldDate": "2026-04",
+      "sqft": 1450,
+      "beds": 3,
+      "baths": 2,
+      "url": "https://www.redfin.com/CA/San-Francisco/EXAMPLE-COMP-2",
+      "why": "Updated finishes, ~0.4 mi away, sold within 6 months"
+    },
+    {
+      "address": "77 Sample Blvd (DEMO), Bayview, San Francisco, CA",
+      "soldPrice": 1750000,
+      "soldDate": "2026-06",
+      "sqft": 1500,
+      "beds": 4,
+      "baths": 2,
+      "url": "https://www.redfin.com/CA/San-Francisco/EXAMPLE-COMP-3",
+      "why": "Fully renovated, slightly larger — upper-end supportable ARV"
+    }
+  ]
+}
