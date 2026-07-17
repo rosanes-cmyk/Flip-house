@@ -112,7 +112,16 @@ In the GitHub repo → **Settings → Secrets and variables → Actions**, add:
 Open `dashboard/index.html` (locally or on GitHub Pages), enter your Worker URL +
 secret once, click **Run Scan Now**.
 
-## Run it
+## One-button app for Juan (no key, runs locally)
+
+```bash
+npm start
+```
+Then open **http://localhost:8080** and click the green **RUN** button. It shows
+only the **qualified lead(s)** — rejected/turnkey/overpriced houses are hidden.
+Point it at your own file with `PROPERTIES_FILE=path\to\file.json npm start`.
+
+## Run it (headless / API)
 
 ```bash
 # full daily scan

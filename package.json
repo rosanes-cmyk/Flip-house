@@ -4,6 +4,7 @@
   "description": "Autonomous AI agent that finds, analyzes, and scores fix-and-flip properties for Twin Home Buyer.",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
