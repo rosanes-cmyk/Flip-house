@@ -9,7 +9,8 @@
     "tail": "wrangler tail",
     "test": "node --test",
     "build": "node scripts/validate-imports.mjs",
-    "demo": "node demo/run-demo.js"
+    "demo": "node demo/run-demo.js",
+    "leads": "node demo/run-leads.js"
   },
   "keywords": [
     "real-estate",
