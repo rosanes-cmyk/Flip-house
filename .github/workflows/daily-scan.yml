@@ -1,0 +1,20 @@
+name: Daily Flip Scout Scan
+
+# Backup trigger. The Cloudflare cron (wrangler.toml) is the primary scheduler;
+# this hits the same endpoint so you have a second, visible run history and a
+# manual "Run workflow" button.
+on:
+  schedule:
+    - cron: "0 15 * * *" # 15:00 UTC ~ 8:00 AM Pacific
+  workflow_dispatch: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the agent
+        run: |
+          curl -sS -X POST "${{ secrets.WORKER_URL }}/run" \
+            -H "Authorization: Bearer ${{ secrets.AGENT_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail-with-body

@@ -1,0 +1,14 @@
+name = "flip-scout-agent"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# Runs every day at 15:00 UTC (8:00 AM Pacific Standard / 8:00 AM PDT = 15:00 UTC in summer).
+# Adjust if you want a different time. Format is standard cron (UTC).
+[triggers]
+crons = ["0 15 * * *"]
+
+# Non-secret defaults. Real secrets are set with `wrangler secret put ...`
+# (GEMINI_API_KEY, SUPABASE_URL, SUPABASE_KEY, AGENT_SECRET, REPORT_EMAIL_TO).
+[vars]
+MAX_LISTINGS_PER_RUN = "20"
+HOLDING_MONTHS = "6"

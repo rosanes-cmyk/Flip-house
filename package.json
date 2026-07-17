@@ -1,0 +1,24 @@
+{
+  "name": "flip-scout-agent",
+  "version": "1.0.0",
+  "description": "Autonomous AI agent that finds, analyzes, and scores fix-and-flip properties for Twin Home Buyer.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "test": "node --test"
+  },
+  "keywords": [
+    "real-estate",
+    "flip",
+    "ai-agent",
+    "cloudflare-workers",
+    "gemini"
+  ],
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "wrangler": "^3.60.0"
+  }
+}

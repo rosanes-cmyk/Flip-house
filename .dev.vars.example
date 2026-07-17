@@ -1,0 +1,9 @@
+# Copy this file to `.dev.vars` for local development with `wrangler dev`.
+# In production, set these with `wrangler secret put <NAME>` instead.
+# NEVER commit real keys. `.dev.vars` is git-ignored.
+
+GEMINI_API_KEY=your-google-ai-studio-key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-service-or-anon-key
+AGENT_SECRET=pick-a-long-random-string
+REPORT_EMAIL_TO=juan@twinhomebuyer.com

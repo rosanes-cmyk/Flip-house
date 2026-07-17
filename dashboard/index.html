@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flip Scout — Twin Home Buyer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+      <header class="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 class="text-3xl font-bold">🏠 Flip Scout</h1>
+          <p class="text-slate-500">Daily deal finder for Twin Home Buyer</p>
+        </div>
+        <button
+          id="run"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-medium"
+        >
+          Run Scan Now
+        </button>
+      </header>
+
+      <!-- Config: paste your Worker URL + secret once; stored in this browser only -->
+      <details class="mb-6 bg-white rounded-xl border p-4">
+        <summary class="cursor-pointer font-medium">Connection settings</summary>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label class="text-sm">
+            Worker URL
+            <input id="workerUrl" placeholder="https://flip-scout-agent.you.workers.dev"
+              class="mt-1 w-full border rounded px-3 py-2" />
+          </label>
+          <label class="text-sm">
+            Agent Secret
+            <input id="agentSecret" type="password" placeholder="AGENT_SECRET"
+              class="mt-1 w-full border rounded px-3 py-2" />
+          </label>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Saved in your browser localStorage — never uploaded anywhere but your own Worker.</p>
+      </details>
+
+      <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+      <div id="status" class="text-sm text-slate-500 mb-4"></div>
+      <div id="deals" class="grid gap-4"></div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      // restore saved connection
+      $("workerUrl").value = localStorage.getItem("fs_url") || "";
+      $("agentSecret").value = localStorage.getItem("fs_secret") || "";
+      $("workerUrl").onchange = (e) => localStorage.setItem("fs_url", e.target.value.trim());
+      $("agentSecret").onchange = (e) => localStorage.setItem("fs_secret", e.target.value.trim());
+
+      function statCard(label, value) {
+        return `<div class="bg-white rounded-xl border p-5">
+          <div class="text-3xl font-bold">${value}</div>
+          <div class="text-slate-500 text-sm mt-1">${label}</div></div>`;
+      }
+
+      function dealCard(d, i) {
+        return `<div class="bg-white rounded-xl border p-5">
+          <div class="flex justify-between items-start gap-4">
+            <div>
+              <div class="text-lg font-semibold">${i + 1}. ${d.address || "Unknown"}</div>
+              <a href="${d.url || "#"}" target="_blank" class="text-blue-600 text-sm underline">listing</a>
+            </div>
+            <div class="text-right">
+              <div class="text-2xl font-bold text-emerald-600">${d.score}/10</div>
+              <div class="text-xs text-slate-500">${d.confidence || ""}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 text-sm">
+            <div><span class="text-slate-400">Asking</span><br>$${num(d.price)}</div>
+            <div><span class="text-slate-400">ARV</span><br>$${num(d.arv)}</div>
+            <div><span class="text-slate-400">Reno</span><br>$${num(d.reno)}</div>
+            <div><span class="text-slate-400">Profit</span><br>$${num(d.profit)}</div>
+            <div><span class="text-slate-400">Margin</span><br>${d.marginOnCost}%</div>
+            <div><span class="text-slate-400">Max Offer</span><br>$${num(d.mao)}</div>
+          </div>
+          <div class="mt-4 text-sm">
+            <div><span class="text-slate-400">Main risk:</span> ${d.topRisk || "—"}</div>
+            <div class="mt-1 font-medium">→ ${d.recommendation || ""}</div>
+          </div>
+        </div>`;
+      }
+      const num = (n) => Math.round(n || 0).toLocaleString();
+
+      async function runScan() {
+        const base = ($("workerUrl").value || "").trim().replace(/\/$/, "");
+        const secret = ($("agentSecret").value || "").trim();
+        if (!base) return alert("Enter your Worker URL in connection settings.");
+        $("status").textContent = "Running scan… this can take a few minutes.";
+        $("run").disabled = true;
+        try {
+          const res = await fetch(base + "/run", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + secret },
+          });
+          const data = await res.json();
+          render(data);
+          $("status").textContent = data.emailDelivered
+            ? "Done. Email sent to Juan."
+            : "Done. (Email not configured — report shown below.)";
+        } catch (e) {
+          $("status").textContent = "Error: " + e.message;
+        } finally {
+          $("run").disabled = false;
+        }
+      }
+
+      function render(data) {
+        $("stats").innerHTML =
+          statCard("Reviewed", data.listingsFound ?? 0) +
+          statCard("Buy Box Passed", data.buyBoxPassed ?? 0) +
+          statCard("Qualified (8+)", data.qualified ?? 0) +
+          statCard("Best Score", data.topDeals?.[0]?.score ?? "—");
+        $("deals").innerHTML =
+          (data.topDeals || []).map(dealCard).join("") ||
+          '<div class="text-slate-500">No qualifying deals in this run.</div>';
+      }
+
+      $("run").onclick = runScan;
+    </script>
+  </body>
+</html>
