@@ -95,10 +95,33 @@ async function runDailyScan(env) {
   const results = {
     date: new Date().toISOString(),
     areasSearched,
-    sourcesChecked: ["Redfin", "Zillow", "Realtor.com", "public records (via search)"],
+    sourcesChecked: [
+      "Redfin (public listing pages)",
+      "Zillow (public listing pages)",
+      "Realtor.com (public listing pages)",
+      "County assessor / GIS parcel (via search)",
+      "City permit & planning/zoning portals (via search)",
+      "FEMA flood maps (via search)",
+      "Public fire-hazard maps (via search)",
+      "Public sold-property data (via search)",
+    ],
     listingsFound: 0,
     buyBoxPassed: 0,
     qualified: 0,
+    // Condition-strategy counters (Juan's dashboard).
+    middleTargets: 0,
+    turnkeyRejected: 0,
+    extremeRejected: 0,
+    needPhotoReview: 0,
+    needInspection: 0,
+    conditionCounts: {
+      middle: 0,
+      light_cosmetic: 0,
+      heavy: 0,
+      turnkey: 0,
+      extreme: 0,
+      unknown: 0,
+    },
     dataLimitations: DATA_DISCLAIMER,
     topDeals: [],
     rejected: [],
@@ -135,6 +158,17 @@ async function runDailyScan(env) {
       const deal = analyzeDeal(listing, { classification, comps, risks }, holdingMonths);
       if (deal.arv) await db.saveDealAnalysis(deal);
 
+      // Condition tallies (counted for every analyzed listing, not just winners).
+      if (deal.conditionCategoryKey && results.conditionCounts[deal.conditionCategoryKey] != null) {
+        results.conditionCounts[deal.conditionCategoryKey]++;
+      }
+      if (deal.conditionCategoryKey === "middle") results.middleTargets++;
+      if (deal.conditionGate === "reject_turnkey") results.turnkeyRejected++;
+      if (deal.conditionGate === "reject_extreme" || deal.conditionGate === "blocked_risk")
+        results.extremeRejected++;
+      if (deal.needsPhotoReview) results.needPhotoReview++;
+      if (deal.needsInspection) results.needInspection++;
+
       if (deal.qualified) {
         results.qualified++;
         results.topDeals.push({
@@ -148,12 +182,20 @@ async function runDailyScan(env) {
           mao: deal.mao,
           score: deal.score,
           confidence: deal.confidence,
+          conditionCategory: deal.conditionCategory,
+          conditionCategoryKey: deal.conditionCategoryKey,
+          conditionFitScore: deal.conditionFitScore,
+          strategyFit: deal.strategyFit,
+          estimatedTimeline: deal.estimatedTimeline,
+          uglyFixableSignal: (deal.uglyFixableSignals || [])[0] || null,
           recommendation: deal.recommendation,
           topRisk: (deal.classification.redFlags || [])[0] || "See risk scan",
         });
       } else {
         results.rejected.push({
           address: deal.address,
+          conditionCategory: deal.conditionCategory,
+          conditionGate: deal.conditionGate,
           reason: deal.reason || `Score ${deal.score} / conservative not profitable`,
         });
       }
@@ -202,13 +244,17 @@ async function buildEmail(results, gemini) {
     deals.forEach((d, i) => {
       lines.push("");
       lines.push(`${i + 1}. ${d.address}`);
+      lines.push(`   Juan Strategy Fit: ${d.strategyFit}`);
+      lines.push(`   Condition: ${d.conditionCategory} (fit ${d.conditionFitScore}/15)`);
       lines.push(`   Asking Price: $${fmt(d.price)}`);
       lines.push(`   Estimated ARV: $${fmt(d.arv)}`);
       lines.push(`   Estimated Renovation: $${fmt(d.reno)}`);
       lines.push(`   Estimated Profit: $${fmt(d.profit)}`);
       lines.push(`   Estimated Margin (on cost): ${d.marginOnCost}%`);
       lines.push(`   Max Allowable Offer: $${fmt(d.mao)}`);
+      lines.push(`   Estimated Timeline: ${d.estimatedTimeline}`);
       lines.push(`   Score: ${d.score}/10 (${d.confidence})`);
+      lines.push(`   Main Opportunity: ${d.uglyFixableSignal || "outdated / value-add"}`);
       lines.push(`   Main Risk: ${d.topRisk}`);
       lines.push(`   Recommended Next Step: ${d.recommendation}`);
       lines.push(`   Listing: ${d.url || "n/a"}`);
@@ -220,6 +266,11 @@ async function buildEmail(results, gemini) {
   lines.push(`  Listings Reviewed: ${results.listingsFound}`);
   lines.push(`  Listings Rejected: ${results.rejected.length}`);
   lines.push(`  Qualified Deals: ${results.qualified}`);
+  lines.push(`  Middle-Condition Targets Found: ${results.middleTargets}`);
+  lines.push(`  Turnkey Rejected: ${results.turnkeyRejected}`);
+  lines.push(`  Extreme/Critical Rejected: ${results.extremeRejected}`);
+  lines.push(`  Need Photo Review: ${results.needPhotoReview}`);
+  lines.push(`  Need Inspection: ${results.needInspection}`);
   lines.push(`  Best Opportunity: ${deals[0]?.address || "none"}`);
   lines.push("");
   lines.push(`Note: ${results.dataLimitations}`);

@@ -14,15 +14,25 @@ export class ResearchAgent {
     const out = [];
     for (const [city, data] of Object.entries(TARGET_AREAS)) {
       for (const neighborhood of data.neighborhoods) {
-        const prompt = `Find fixer-upper / value-add homes CURRENTLY for sale in ${neighborhood}, ${cityLabel(city)}, California.
+        const prompt = `Find "ugly but fixable" homes CURRENTLY for sale in ${neighborhood}, ${cityLabel(city)}, California.
+
+Target the MIDDLE of the condition range for Juan Diaz (Twin Home Buyer):
+- WANT: outdated, worn, original-condition, cluttered, poorly presented, dated
+  kitchen/bath, old flooring/paint/fixtures, deferred maintenance, partial
+  renovation — but structurally usable and improvable in ~4-6 months.
+- AVOID: turnkey / fully-renovated / move-in-ready homes (no upside, renovation
+  premium already priced in).
+- AVOID: extreme/unsafe homes (foundation failure, severe fire/water/mold,
+  teardown, red-tagged, major structural).
 
 Strict criteria:
 - Asking price between $${BUY_BOX.minPrice.toLocaleString()} and $${BUY_BOX.maxPrice.toLocaleString()}
 - Property type: single-family, duplex, triplex, fourplex, or small multifamily
 - Bedrooms: ${BUY_BOX.minBeds} to ${BUY_BOX.maxBeds}
-- Prefer listings mentioning: ${BUY_BOX.fixerKeywords.slice(0, 12).join(", ")}
+- Prefer listings mentioning: ${BUY_BOX.fixerKeywords.slice(0, 14).join(", ")}
 
-Search Redfin, Zillow, and Realtor.com. For EACH property list:
+Check the free, publicly accessible sources: Redfin, Zillow, and Realtor.com public
+listing pages. For EACH property list:
 - Full street address
 - Asking price
 - Beds / baths
@@ -31,7 +41,9 @@ Search Redfin, Zillow, and Realtor.com. For EACH property list:
 - Direct listing URL
 - One line on condition from the description
 
-Only include real, currently-listed properties with a source URL. If you cannot verify a property, do not list it.`;
+Only include real, currently-listed properties with a source URL. Never invent a
+listing. If you cannot verify a property, do not list it. Note that MLS was not used —
+this is publicly accessible listing data only.`;
 
         try {
           const { text, sources } = await this.gemini.searchAndAsk(prompt);
@@ -72,36 +84,72 @@ Use only what the page actually shows. Use null for anything not stated.`;
   }
 
   // Classify condition + value-add from the description (fast, no search).
+  // Juan's target is the MIDDLE band: "ugly but fixable" — outdated/worn/cluttered
+  // but structurally usable. NOT turnkey (no upside) and NOT extreme (too risky).
   async classifyProperty({ description, price, squareFeet, yearBuilt }) {
-    const prompt = `You are a conservative fix-and-flip underwriter. Analyze this property.
+    const prompt = `You are a conservative fix-and-flip underwriter for Twin Home Buyer.
+Juan's strategy: prioritize "ugly but fixable" homes — outdated, worn, cluttered,
+original-condition, poorly presented, or partially renovated but STRUCTURALLY USABLE
+and improvable in ~4-6 months. Avoid turnkey homes (renovation premium already priced
+in, no upside) and avoid extreme/unsafe homes (major structural, fire, mold, teardown).
+
+Do NOT confuse "ugly" with "unsafe or destroyed."
 
 Price: $${price}
 Living area: ${squareFeet} sqft
 Year built: ${yearBuilt}
-Description: "${(description || "").slice(0, 900)}"
+Description: "${(description || "").slice(0, 1200)}"
+
+Detect these signal groups from the TEXT only:
+- Ugly-but-fixable (target): dated finishes, original condition, old kitchen/bath,
+  worn flooring, old carpet, peeling/dated paint, poor curb appeal, overgrown
+  landscaping, clutter, poor staging, dark rooms, dated fixtures, old cabinets,
+  partial renovation, deferred maintenance, functional but unattractive.
+- Turnkey (avoid): fully/newly remodeled, luxury/designer finishes, move-in ready,
+  new kitchen/bath, new roof/electrical/plumbing/HVAC, professionally staged,
+  recently upgraded throughout.
+- Extreme-risk (usually reject): foundation failure, major structural damage, severe
+  fire damage, severe water intrusion, extensive mold, red-tagged, unsafe occupancy,
+  complete teardown, extensive unpermitted construction, major environmental remediation.
 
 Return JSON:
 {
+  "conditionCategory": "turnkey | light_cosmetic | middle | heavy | extreme | unknown",
   "condition": "poor | fair | good | excellent | unknown",
   "renovationScope": "cosmetic | moderate | heavy",
   "confidence": "high | medium | low",
+  "uglyFixableSignals": ["phrase from text", ...],
+  "turnkeySignals": ["phrase from text", ...],
+  "extremeRiskSignals": ["phrase from text", ...],
   "fixerSignals": ["keyword", ...],
-  "redFlags": ["structural/foundation/fire/water/tenant/etc.", ...],
+  "redFlags": ["specific concern, e.g. foundation failure / fire damage / tenant", ...],
   "aduPotential": "strong | moderate | weak | unknown | not_practical",
   "expansionPotential": true | false,
   "extraBedBathPotential": true | false,
+  "observationSource": "Confirmed from listing text | Inferred from public records | Unknown | Requires inspection",
   "summary": "2-3 sentence conservative assessment"
 }
-Be conservative: when the description is thin, prefer "moderate" scope and "unknown" confidence.`;
+
+Rules:
+- Base every signal ONLY on the listing text. We do NOT analyze photos, so never
+  claim a defect is "visually confirmed from photos." Use "Requires inspection" or
+  "Unknown" when the text does not state a condition.
+- Be conservative: when the description is thin, prefer "middle"/"moderate" scope and
+  "low" confidence, and put uncertain defects in redFlags as "requires inspection".`;
     return this.gemini.askJson(prompt, {
+      conditionCategory: "unknown",
       condition: "unknown",
       renovationScope: "moderate",
       confidence: "low",
+      uglyFixableSignals: [],
+      turnkeySignals: [],
+      extremeRiskSignals: [],
       fixerSignals: [],
       redFlags: [],
       aduPotential: "unknown",
       expansionPotential: false,
       extraBedBathPotential: false,
+      observationSource: "Unknown — requires inspection",
       summary: "Insufficient description to assess.",
     });
   }

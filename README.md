@@ -11,6 +11,36 @@ Conservative only. A deal is shown **only** if it clears an 8/10 score **and** s
 hits ≥$75K profit and ≥20% margin on cost using the *low* ARV, *high* renovation, and
 *longer* holding period. Never on optimism.
 
+## Condition strategy — "ugly but fixable"
+
+The agent targets the **middle** of the condition range, not the extremes:
+
+| Category | Condition-fit (0–15) | Default decision |
+|---|---|---|
+| Turnkey / too nice | 0–3 | Reject *unless* a big enough discount makes the conservative scenario pass. Reason: **"Too turnkey / insufficient value-add potential."** |
+| Light cosmetic | 7–11 | Candidate only if the discount creates conservative profit |
+| **Middle — "ugly but fixable"** | **12–15** | **Priority target** (outdated, worn, cluttered, original, partial reno, but usable) |
+| Heavy but possible | 5–10 | Review carefully; needs higher spread + contingency |
+| Extreme / too risky | 0–4 | Reject. Reason: **"Condition too severe / renovation and timeline risk too high."** |
+
+The condition-fit score is **one 15-point input to the 100-point deal score** — it
+never overrides a financial or critical-risk failure. A property qualifies only when
+score ≥ 8.0, conservative profit ≥ $75K, margin ≥ 20%, ARV backed by **3+ comps**, no
+unresolved critical risk (e.g. foundation failure red-flags the deal), renovation is
+achievable in ~4–6 months, and it is **not already priced like a renovated home**.
+
+Ugly ≠ unsafe: a "worse-looking = better" rule is explicitly **not** used.
+
+### New per-property fields
+`Condition Category`, `Condition Fit Score`, `Juan Strategy Fit: Strong/Moderate/Weak/Reject`,
+`Why It Fits or Does Not Fit`, `Turnkey Signals`, `Ugly-but-Fixable Signals`,
+`Extreme-Risk Signals`, `Likely Renovation Scope`, `Estimated Timeline`,
+`Condition Confidence`, `Required Physical Verification`.
+
+> **No photo analysis.** Condition signals come from **listing text only**, labeled
+> "Confirmed from listing text". The agent never claims a defect is "visually confirmed
+> from photos" — anything not in the text is "Requires inspection" / "Unknown".
+
 ## What runs where (all free)
 
 | Job | Tool | Free tier |
@@ -28,13 +58,22 @@ hits ≥$75K profit and ≥20% margin on cost using the *low* ARV, *high* renova
 
 ## How it works each day
 
-1. **Search** target neighborhoods (Redfin/Zillow/Realtor via Gemini grounded search)
+1. **Search** target neighborhoods for "ugly but fixable" homes (Redfin/Zillow/Realtor
+   public pages via Gemini grounded search)
 2. **Extract** each listing's facts
 3. **Buy-box gate** — price $700K–$2.5M, 2–5 beds, allowed types; rejects logged
-4. **Research** — condition/scope, 3+ sold comps, public-records risk scan
-5. **Analyze** — ARV (low/base/high), renovation, full project cost, 3 scenarios, MAO
-6. **Score** 1–10 and decide (qualify only if conservative scenario is profitable)
-7. **Report** — save to Supabase + email Juan the top deals
+4. **Condition classify** — turnkey / light / middle / heavy / extreme + condition-fit
+5. **Research** — 3+ sold comps, public-records risk scan (assessor, GIS, permits,
+   FEMA, fire maps — the free sources checked are recorded on every report)
+6. **Analyze** — ARV (low/base/high), renovation, full project cost, 3 scenarios, MAO
+7. **Score** 1–10 and decide (qualify only if conservative scenario is profitable, the
+   condition isn't turnkey/extreme, and no critical risk is unresolved)
+8. **Report** — save to Supabase + email Juan the top deals with their Strategy Fit
+
+Every run also reports: middle-condition targets found, turnkey rejected, extreme/
+critical rejected, properties needing photo review, properties needing inspection.
+The dashboard adds condition filters (ugly but fixable, light cosmetic, heavy but
+possible, too turnkey, too risky, unknown).
 
 ## Setup (~45 min, one time)
 

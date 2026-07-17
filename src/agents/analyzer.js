@@ -1,9 +1,13 @@
 // Analysis agent: turns a listing + research into a scored, decided deal.
 // Financial math is 100% deterministic (calculator); AI only classifies/summarizes.
 import { FlipCalculator } from "../tools/calculator.js";
-import { BUY_BOX, MIN_SCORE_TO_PRESENT } from "../config.js";
+import { resolveCondition } from "../tools/condition.js";
+import { BUY_BOX, MIN_SCORE_TO_PRESENT, FINANCIAL } from "../config.js";
 
 const calc = new FlipCalculator();
+
+// Reliable-ARV threshold: qualification requires at least this many comps.
+const MIN_RELIABLE_COMPS = 3;
 
 // Hard buy-box gate. Returns {passed, reason}.
 export function checkBuyBox(listing) {
@@ -68,27 +72,51 @@ function demandForCity(city) {
 // Full analysis for one buy-box-passing listing.
 // research = { classification, comps, risks }
 export function analyzeDeal(listing, research, holdingMonths = 6) {
-  const { classification, comps, risks } = research;
+  const { classification = {}, comps, risks } = research;
+
+  // --- Condition strategy (Juan's "ugly but fixable" mandate) -------------
+  // Build evidence from listing text + the AI's distilled red flags. We do NOT
+  // feed the exploratory risk narrative here (it names hazards generically and
+  // would false-positive). Condition drives renovation scope and gating.
+  const evidence = [
+    listing.description || "",
+    ...(classification.redFlags || []),
+    ...(classification.fixerSignals || []),
+  ].join(" . ");
+  const condition = resolveCondition(evidence, classification);
+  const scope = condition.likelyRenovationScope;
 
   const arv = arvFromComps(comps?.comps || []);
+
+  // If we cannot value the property at all, we still surface the condition read
+  // so the dashboard can categorize it, but it cannot qualify.
   if (!arv) {
-    return {
+    return baseResult({
+      listing,
+      condition,
+      scope,
+      classification,
+      comps,
+      risks,
       qualified: false,
+      conditionGate: condition.criticalRisk
+        ? "blocked_risk"
+        : condition.category === "extreme"
+        ? "reject_extreme"
+        : "ok",
       reason: "No comparable sales found — ARV unsupported",
-      address: listing.address,
-    };
+      strategyFit: "Reject",
+      recommendation: "Reject",
+    });
   }
 
-  const scope = classification.renovationScope || "moderate";
   const reno = calc.renovationEstimate(scope, listing.squareFeet || 0);
-
   const scenarios = calc.scenarios({
     purchasePrice: listing.price,
     arv,
     reno,
     holdingMonths,
   });
-
   const baseCost = calc.totalCost({
     purchasePrice: listing.price,
     renovation: reno.expected,
@@ -101,24 +129,24 @@ export function analyzeDeal(listing, research, holdingMonths = 6) {
   });
   const returnOnCash =
     cashRequired > 0 ? round1((scenarios.base.netProfit / cashRequired) * 100) : 0;
-
   const mao = calc.maximumAllowableOffer({
     conservativeArv: arv.low,
     expectedReno: reno.expected,
     holdingMonths,
   });
 
-  const riskLevel =
-    (classification.redFlags || []).length >= 2
-      ? "high"
-      : (classification.redFlags || []).length === 1
-      ? "medium"
-      : "low";
+  const riskLevel = condition.criticalRisk
+    ? "high"
+    : (classification.redFlags || []).length >= 2
+    ? "high"
+    : (classification.redFlags || []).length === 1
+    ? "medium"
+    : "low";
 
   const scoring = calc.scoreDeal({
     marginOnCost: scenarios.base.marginOnCost,
     compCount: arv.count,
-    scope,
+    conditionFitScore: condition.fitScore, // condition-fit drives this dimension
     demand: demandForCity(listing.city),
     aduPotential: classification.aduPotential,
     expansionPotential: classification.expansionPotential,
@@ -126,47 +154,157 @@ export function analyzeDeal(listing, research, holdingMonths = 6) {
     riskLevel,
   });
 
-  const confidence = confidenceFrom(arv.count, classification.confidence);
+  const confidence = confidenceFrom(arv.count, condition.conditionConfidence);
+  const conservativePasses = scenarios.conservative.meetsMinimum;
+  const reliableComps = arv.count >= MIN_RELIABLE_COMPS;
 
-  // A deal only qualifies if it clears the score AND is profitable under the
-  // CONSERVATIVE scenario — never on optimism alone.
+  // --- Decision gates (order matters) -------------------------------------
+  // Condition-fit never overrides a financial or critical-risk failure.
+  let conditionGate = "ok";
+  let reason = null;
+
+  if (condition.criticalRisk) {
+    conditionGate = "blocked_risk";
+    reason = `Critical unresolved risk: ${condition.criticalRiskSignals.join(", ")}`;
+  } else if (condition.category === "extreme") {
+    conditionGate = "reject_extreme";
+    reason = "Condition too severe / renovation and timeline risk too high.";
+  } else if (condition.category === "turnkey" && !conservativePasses) {
+    // Turnkey is a DEFAULT reject only when there is no discount. A turnkey home
+    // with a big enough discount that the conservative scenario still passes is
+    // NOT auto-rejected — it goes on to be judged on the numbers (test 8).
+    conditionGate = "reject_turnkey";
+    reason = "Too turnkey / insufficient value-add potential.";
+  } else if (!conservativePasses) {
+    reason = `Insufficient spread — conservative net profit $${scenarios.conservative.netProfit.toLocaleString()} / margin ${scenarios.conservative.marginOnCost}% below minimum ($${FINANCIAL.minProfitDollars.toLocaleString()} / ${FINANCIAL.minMarginPct * 100}%).`;
+  } else if (!reliableComps) {
+    reason = `ARV unsupported — only ${arv.count} comparable sale(s), need ${MIN_RELIABLE_COMPS}+.`;
+  } else if (scoring.score < MIN_SCORE_TO_PRESENT) {
+    reason = `Deal score ${scoring.score} below ${MIN_SCORE_TO_PRESENT}.`;
+  }
+
   const qualified =
-    scoring.score >= MIN_SCORE_TO_PRESENT && scenarios.conservative.meetsMinimum;
+    conditionGate === "ok" &&
+    conservativePasses &&
+    reliableComps &&
+    scoring.score >= MIN_SCORE_TO_PRESENT;
 
-  const recommendation = qualified
-    ? scenarios.conservative.meetsMinimum
-      ? "Contact listing agent / request disclosures"
-      : "Monitor for price reduction"
-    : "Reject";
-
-  return {
+  const strategyFit = deriveStrategyFit({
     qualified,
-    address: listing.address,
-    city: listing.city,
-    url: listing.url,
-    price: listing.price,
-    squareFeet: listing.squareFeet,
-    beds: listing.bedrooms,
-    baths: listing.bathrooms,
+    conditionGate,
+    category: condition.category,
+    fitScore: condition.fitScore,
+    conservativePasses,
+  });
+
+  let recommendation;
+  if (qualified) {
+    recommendation = "Contact listing agent / request disclosures";
+  } else if (conditionGate !== "ok") {
+    recommendation = "Reject";
+  } else if (condition.fitScore >= 12 && !conservativePasses) {
+    recommendation = "Monitor for price reduction";
+  } else {
+    recommendation = "Reject";
+  }
+
+  return baseResult({
+    listing,
+    condition,
     scope,
-    reno,
+    classification,
+    comps,
+    risks,
     arv,
-    costBreakdown: baseCost,
+    reno,
     scenarios,
-    base: scenarios.base,
-    conservative: scenarios.conservative,
-    optimistic: scenarios.optimistic,
+    baseCost,
     cashRequired,
     returnOnCash,
     mao,
-    score: scoring.score,
-    scoreParts: scoring.parts,
+    scoring,
     confidence,
     riskLevel,
-    classification,
-    comps: comps?.comps || [],
-    risks,
+    qualified,
+    conditionGate,
+    reason,
+    strategyFit,
     recommendation,
+  });
+}
+
+// Strategy-fit label per Juan's summary requirement.
+function deriveStrategyFit({ qualified, conditionGate, category, fitScore, conservativePasses }) {
+  if (conditionGate !== "ok") return "Reject";
+  if (qualified) return category === "middle" ? "Strong" : "Moderate";
+  if (fitScore >= 12 && !conservativePasses) return "Weak"; // great house, wrong price
+  if (fitScore >= 7) return "Weak";
+  return "Reject";
+}
+
+function strategyFitReason(condition, qualified, reason) {
+  if (qualified) {
+    return `${condition.categoryLabel}. Ugly/outdated enough to create value, renovation is ${condition.likelyRenovationScope}, timeline ~${condition.estimatedTimeline}, and the conservative scenario clears Juan's minimums.`;
+  }
+  return `${condition.categoryLabel}. Does not fit: ${reason || "financial or risk criteria not met"}.`;
+}
+
+// Assemble the analysis object with all new condition output fields.
+function baseResult(o) {
+  const c = o.condition;
+  const qualified = o.qualified;
+  return {
+    qualified,
+    address: o.listing.address,
+    city: o.listing.city,
+    url: o.listing.url,
+    price: o.listing.price,
+    squareFeet: o.listing.squareFeet,
+    beds: o.listing.bedrooms,
+    baths: o.listing.bathrooms,
+
+    // --- Condition fields (NEW) ---
+    conditionCategory: c.categoryLabel,
+    conditionCategoryKey: c.category,
+    conditionFitScore: c.fitScore,
+    strategyFit: o.strategyFit,
+    strategyFitReason: strategyFitReason(c, qualified, o.reason),
+    turnkeySignals: c.turnkeySignals,
+    uglyFixableSignals: c.uglyFixableSignals,
+    extremeRiskSignals: c.extremeRiskSignals,
+    likelyRenovationScope: c.likelyRenovationScope,
+    estimatedTimeline: c.estimatedTimeline,
+    conditionConfidence: c.conditionConfidence,
+    observationSource: c.observationSource,
+    requiredPhysicalVerification: c.requiredPhysicalVerification,
+    conditionGate: o.conditionGate,
+    criticalRisk: c.criticalRisk,
+    needsPhotoReview:
+      c.observationSource.startsWith("Unknown") || c.conditionConfidence === "low",
+    needsInspection: ["middle", "heavy", "extreme"].includes(c.category),
+
+    // --- Financial fields ---
+    scope: o.scope,
+    reno: o.reno,
+    arv: o.arv,
+    costBreakdown: o.baseCost,
+    scenarios: o.scenarios,
+    base: o.scenarios?.base,
+    conservative: o.scenarios?.conservative,
+    optimistic: o.scenarios?.optimistic,
+    cashRequired: o.cashRequired,
+    returnOnCash: o.returnOnCash,
+    mao: o.mao,
+    score: o.scoring?.score ?? 0,
+    scoreParts: o.scoring?.parts,
+    confidence: o.confidence,
+    riskLevel: o.riskLevel,
+
+    classification: o.classification,
+    comps: o.comps?.comps || [],
+    risks: o.risks,
+    reason: o.reason,
+    recommendation: o.recommendation,
     nextStep: qualified
       ? "Verify condition, comps, and occupancy before submitting an offer near the MAO."
       : "Store internally; no action.",

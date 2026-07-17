@@ -166,7 +166,10 @@ export class FlipCalculator {
     return { conservative, base, optimistic };
   }
 
-  // 100-point score → 1–10 scale. Deterministic weighting per the blueprint.
+  // 100-point score → 1–10 scale. Deterministic weighting per the blueprint,
+  // updated for Juan's condition strategy: the renovation-risk slot is now the
+  // Condition Fit dimension (0–15), which rewards the "ugly but fixable" middle
+  // band and penalizes both turnkey and extreme condition.
   scoreDeal(m) {
     const parts = {};
 
@@ -176,9 +179,16 @@ export class FlipCalculator {
     // ARV confidence: 15 pts, driven by comp count.
     parts.arvConfidence = m.compCount >= 5 ? 15 : m.compCount >= 3 ? 11 : m.compCount >= 1 ? 6 : 2;
 
-    // Renovation risk: 15 pts (lower scope = higher score).
-    parts.renovationRisk =
-      m.scope === "cosmetic" ? 15 : m.scope === "moderate" ? 10 : 5;
+    // Condition fit: 15 pts. Prefer the resolved condition-fit score; fall back
+    // to the old scope heuristic only if no condition-fit was supplied.
+    parts.conditionFit =
+      typeof m.conditionFitScore === "number"
+        ? clamp(m.conditionFitScore, 0, 15)
+        : m.scope === "cosmetic"
+        ? 12
+        : m.scope === "moderate"
+        ? 13
+        : 5;
 
     // Location & resale demand: 15 pts.
     parts.locationDemand =
@@ -200,7 +210,7 @@ export class FlipCalculator {
     const raw =
       parts.financialSpread +
       parts.arvConfidence +
-      parts.renovationRisk +
+      parts.conditionFit +
       parts.locationDemand +
       parts.valueAdd +
       parts.legalOccupancy;

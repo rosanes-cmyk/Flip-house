@@ -47,7 +47,7 @@ test("score maps to 1-10 and caps at 10", () => {
   const s = calc.scoreDeal({
     marginOnCost: 35,
     compCount: 6,
-    scope: "cosmetic",
+    conditionFitScore: 15,
     demand: "high",
     aduPotential: "strong",
     expansionPotential: true,
@@ -56,6 +56,7 @@ test("score maps to 1-10 and caps at 10", () => {
   });
   assert.ok(s.score <= 10);
   assert.ok(s.score >= 9);
+  assert.equal(s.parts.conditionFit, 15);
 });
 
 test("buy box rejects out-of-range price", () => {

@@ -32,12 +32,33 @@ create table if not exists deal_analyses (
   max_allowable_offer numeric,
   score numeric,
   confidence text,
+  -- condition strategy fields
+  condition_category text,
+  condition_category_key text,
+  condition_fit_score numeric,
+  strategy_fit text,
+  condition_gate text,
+  estimated_timeline text,
+  condition_confidence text,
+  observation_source text,
+  qualified boolean,
   recommendation text,
   next_step text,
   comps jsonb,
   risks text,
   analyzed_at timestamptz default now()
 );
+
+-- If deal_analyses already exists from v1, add the new columns:
+alter table deal_analyses add column if not exists condition_category text;
+alter table deal_analyses add column if not exists condition_category_key text;
+alter table deal_analyses add column if not exists condition_fit_score numeric;
+alter table deal_analyses add column if not exists strategy_fit text;
+alter table deal_analyses add column if not exists condition_gate text;
+alter table deal_analyses add column if not exists estimated_timeline text;
+alter table deal_analyses add column if not exists condition_confidence text;
+alter table deal_analyses add column if not exists observation_source text;
+alter table deal_analyses add column if not exists qualified boolean;
 
 create table if not exists daily_reports (
   id bigint generated always as identity primary key,
